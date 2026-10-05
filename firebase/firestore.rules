@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function owner() { return signedIn() && exists(/databases/$(database)/documents/owners/$(request.auth.uid)); }
+    function editor() { return signedIn() && (owner() || (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.enabled == true)); }
+    function validContent() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['content', 'revision', 'updatedAt', 'updatedBy'])
+        && data.keys().hasOnly(['content', 'revision', 'updatedAt', 'updatedBy'])
+        && data.updatedBy == request.auth.uid && data.updatedAt == request.time
+        && data.revision is int
+        && data.content is map
+        && data.content.keys().hasAll(['texts', 'images', 'reports', 'videoUrl', 'heroLayers'])
+        && data.content.keys().hasOnly(['texts', 'images', 'reports', 'videoUrl', 'heroLayers'])
+        && data.content.texts is map && data.content.texts.size() <= 100
+        && data.content.images is map && data.content.images.size() <= 100
+        && data.content.reports is list && data.content.reports.size() >= 1 && data.content.reports.size() <= 30
+        && data.content.videoUrl is string && data.content.videoUrl.size() <= 2048
+        && data.content.videoUrl.matches('https://.*')
+        && data.content.heroLayers is bool;
+    }
+    match /owners/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || owner());
+      allow list: if owner();
+      // Bootstrap the owner only through Firebase Console or a trusted Admin SDK.
+      allow write: if false;
+    }
+    match /admins/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || owner());
+      allow list: if owner();
+      allow create, update: if owner()
+        && request.resource.data.keys().hasAll(['email', 'enabled'])
+        && request.resource.data.keys().hasOnly(['email', 'enabled'])
+        && request.resource.data.email is string && request.resource.data.email.size() <= 320
+        && request.resource.data.enabled is bool;
+      allow delete: if owner();
+    }
+    match /site/main {
+      allow read: if true;
+      allow create: if editor() && validContent() && request.resource.data.revision == 1;
+      allow update: if editor() && validContent() && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
