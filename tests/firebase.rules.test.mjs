@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import {after,before,test} from 'node:test'
 import {initializeTestEnvironment,assertFails,assertSucceeds} from '@firebase/rules-unit-testing'
-import {doc,getDoc,getDocs,collection,setDoc,deleteDoc,serverTimestamp} from 'firebase/firestore'
+import {doc,getDoc,getDocs,collection,setDoc,deleteDoc,serverTimestamp,writeBatch} from 'firebase/firestore'
 import {ref,uploadBytes,getBytes} from 'firebase/storage'
 
 let environment
@@ -62,4 +62,28 @@ test('storage accepts editor images only; rejects foreign paths, oversized or ex
   await assertSucceeds(uploadBytes(ref(editor,'content/editor/valid.png'),data,{contentType:'image/png'}))
   await assertSucceeds(getBytes(ref(guest,'content/editor/valid.png')))
   await assertFails(uploadBytes(ref(editor,'content/editor/valid.png'),data,{contentType:'image/png'}))
+})
+
+
+test('separate reports require atomic publication and preserve role and revision checks',async()=>{
+  const editor=environment.authenticatedContext('editor').firestore()
+  const guest=environment.unauthenticatedContext().firestore()
+  const ordinary=environment.authenticatedContext('ordinary').firestore()
+  const main=doc(editor,'site','main')
+  const revision=(await getDoc(main)).data().revision+1
+  const {reports,...settings}=content
+  const report={slug:'separate-report',title:'Test',image:'/images/hero.png',paragraphs:['Story'],photos:[{src:'/images/hero.png',alt:'Test'}]}
+  const record={report,order:0,revision,updatedBy:'editor',updatedAt:serverTimestamp()}
+  await assertFails(setDoc(doc(editor,'reports',report.slug),record))
+  const batch=writeBatch(editor)
+  batch.set(main,{content:settings,storageVersion:2,revision,updatedBy:'editor',updatedAt:serverTimestamp()})
+  batch.set(doc(editor,'reports',report.slug),record)
+  await assertSucceeds(batch.commit())
+  await assertSucceeds(getDocs(collection(guest,'reports')))
+  await assertFails(setDoc(doc(ordinary,'reports',report.slug),record))
+  await assertFails(deleteDoc(doc(editor,'reports',report.slug)))
+  const remove=writeBatch(editor)
+  remove.set(main,{content:settings,storageVersion:2,revision:revision+1,updatedBy:'editor',updatedAt:serverTimestamp()})
+  remove.delete(doc(editor,'reports',report.slug))
+  await assertSucceeds(remove.commit())
 })

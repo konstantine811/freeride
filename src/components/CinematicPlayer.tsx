@@ -34,8 +34,8 @@ export default function CinematicPlayer({videoId,title,poster,videoUrl,channelUr
         const heading=document.createElement('strong');heading.textContent=title
         const subtitle=document.createElement('span');subtitle.className='video-dialog-links'
         const addLink=(href:string,label:string)=>{const link=document.createElement('a');link.href=href;link.textContent=label;link.target='_blank';link.rel='noopener noreferrer';subtitle.append(link)}
-        addLink(videoUrl,'Дивитися на YouTube ↗')
-        if(channelUrl)addLink(channelUrl,'Канал YouTube ↗')
+        addLink(videoUrl,'Дивитися на YouTube ↗︎')
+        if(channelUrl)addLink(channelUrl,'Канал YouTube ↗︎')
         copy.append(heading,subtitle);info.append(emblem,copy)
         const transport=document.createElement('div');transport.className='player-transport'
         for(const name of ['rewind','play','fast-forward']){const button=controls.querySelector(`[data-plyr="${name}"]`);if(button)transport.append(button)}
@@ -48,5 +48,5 @@ export default function CinematicPlayer({videoId,title,poster,videoUrl,channelUr
     }).catch(()=>{if(!cancelled)setMessage('Не вдалося завантажити плеєр. Відкрий відео на YouTube.')})
     return()=>{cancelled=true;clearTimeout(timer);player?.destroy();root.current?.replaceChildren()}
   },[videoId,title,poster,videoUrl,channelUrl])
-  return <div className="cinematic-player"><div ref={root} className="cinematic-player-root" />{message && <div className="cinematic-player-status" role="status"><p>{message}</p><div className="video-dialog-links"><a href={videoUrl} target="_blank" rel="noopener noreferrer">Дивитися на YouTube ↗</a>{channelUrl && <a href={channelUrl} target="_blank" rel="noopener noreferrer">Канал YouTube ↗</a>}</div></div>}</div>
+  return <div className="cinematic-player"><div ref={root} className="cinematic-player-root" />{message && <div className="cinematic-player-status" role="status"><p>{message}</p><div className="video-dialog-links"><a href={videoUrl} target="_blank" rel="noopener noreferrer">Дивитися на YouTube ↗︎</a>{channelUrl && <a href={channelUrl} target="_blank" rel="noopener noreferrer">Канал YouTube ↗︎</a>}</div></div>}</div>
 }

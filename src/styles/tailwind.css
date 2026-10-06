@@ -254,3 +254,20 @@ button.video-preview,button.film-preview{width:100%;padding:0;color:inherit;text
 /* The modal is the player itself, without an outer card. */
 .cinematic-player .plyr--youtube:not(.plyr__poster-enabled) .plyr__control--overlaid,.cinematic-player .plyr--youtube.plyr--paused:not(.plyr--stopped) .plyr__control--overlaid{display:none}
 .video-dialog{padding:0;border:0;background:transparent;box-shadow:0 18px 85px #0007;width:min(1000px,94vw);overflow:auto}.video-dialog:focus-visible{outline:none}.video-dialog .video-player-frame{position:relative;background:#15232d}.video-dialog .video-dialog-close{position:absolute;right:14px;top:14px;z-index:5;background:#071723aa;border-color:#c7d8e350;backdrop-filter:blur(8px)}.video-dialog .video-dialog-close:hover{background:#1b364ae6}.player-film-info .video-dialog-links{display:flex!important;gap:12px;margin:5px 0 0;font-size:9px;line-height:1.5;white-space:nowrap;color:#a9bbc8}.player-film-info .video-dialog-links a{padding:0;border:0}.player-film-info .video-dialog-links a:hover{color:#ec8a46}.cinematic-player-status{pointer-events:auto;max-width:calc(100% - 80px)}.cinematic-player-status .video-dialog-links{margin-top:8px;gap:12px;font-size:11px}.video-unavailable h2{font-size:24px}.video-unavailable .video-dialog-links{justify-content:center}.video-dialog .video-unavailable{min-height:320px;padding:50px 24px}@media(max-width:700px){.video-dialog{padding:0;width:95vw}.video-dialog .video-dialog-close{width:30px;min-width:30px;height:30px;right:10px;top:10px;font-size:12px}.player-film-info .video-dialog-links{font-size:8px;gap:12px;margin-top:3px}.cinematic-player .plyr--video,.cinematic-player .plyr--fullscreen-active{padding-bottom:118px}.cinematic-player .plyr--video .plyr__controls{height:118px}.cinematic-player .plyr__control--overlaid{top:calc((100% - 118px)/2)}.cinematic-player-status .video-dialog-links{font-size:9px}}
+
+/* Use vector play icons: iOS renders the Unicode play character as an emoji. */
+.play-icon{display:block;width:1em;height:1em;flex-shrink:0}
+.play,.youtube-play{padding:0;flex-shrink:0;line-height:1}
+.play .play-icon,.youtube-play .play-icon{width:45%;height:45%}
+.youtube,.video-caption strong{display:inline-flex;align-items:center;gap:5px}
+/* Plyr's more specific display:block overrides grid centering on the overlay. */
+.cinematic-player .plyr__control--overlaid svg{position:absolute;left:50%;top:50%;margin:0;transform:translate(-45%,-50%)}
+.cinematic-player .player-transport [data-plyr=play]{display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
+.cinematic-player .player-transport [data-plyr=play] svg{display:block;margin:0;flex-shrink:0}
+.video-dialog .video-dialog-close{display:flex;align-items:center;justify-content:center;padding:0;line-height:1;appearance:none;-webkit-appearance:none}
+.video-dialog .video-dialog-close:focus-visible{outline-offset:2px}
+
+/* Fixed icon geometry independent of Safari's button text metrics. */
+.video-dialog .video-dialog-close svg{display:block;width:18px;height:18px;flex:none;pointer-events:none}
+.play .play-icon,.youtube-play .play-icon{margin:0;pointer-events:none}
+.cinematic-player .player-transport [data-plyr=play] svg{position:static;transform:none}

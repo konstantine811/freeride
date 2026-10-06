@@ -17,13 +17,15 @@ export default function AdminMembers() {
     setBusy(true);setError('')
     try {
       const token = await auth.currentUser.getIdToken()
-      const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '')
       const response = await fetch(`${baseUrl}/api/admins`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ email: email.trim() }),
       }).catch(() => { throw new Error('Не вдалося підключитися до сервера. Перевірте, чи працює бекенд.') })
+      if (response.status === 405) throw new Error('Запит потрапив на сервер без API адміністраторів. У налаштуваннях frontend на Vercel задайте VITE_API_BASE_URL — адресу бекенду без /api — і виконайте новий деплой.')
       const result = await response.json().catch(() => { throw new Error('Сервер надання доступу недоступний. Перевірте підключення бекенду.') })
+      if (response.status === 503 && result.error === 'Authentication service is not configured') throw new Error('Firebase Admin не налаштований на бекенді. Додайте FIREBASE_SERVICE_ACCOUNT_JSON у змінні середовища backend на Vercel і виконайте новий деплой.')
       if (!response.ok) throw new Error(result.error ?? 'Не вдалося надати доступ.')
       setEmail('')
     } catch (err) { setError(errorMessage(err)) } finally { setBusy(false) }

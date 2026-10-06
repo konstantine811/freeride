@@ -1,20 +1,42 @@
-import { doc, runTransaction, serverTimestamp } from 'firebase/firestore'
+import { collection, doc, getDocFromServer, getDocsFromServer, runTransaction, serverTimestamp } from 'firebase/firestore'
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { auth, db, storage } from '../firebaseConfig'
-import { siteContentSchema } from '../data/content'
+import { reportSchema, siteContentSchema } from '../data/content'
 import type { SiteContent } from '../data/content'
+import { contentStorageVersion, migrateLocalImages, splitContent } from './contentPersistence'
 
 export async function publishContent(content:SiteContent,expectedRevision:number) {
   if (!db || !auth?.currentUser) throw new Error('Спочатку увійдіть у свій акаунт.')
-  const validated = siteContentSchema.parse(content)
-  const document = doc(db,'site','main')
+  const database = db
+  const document = doc(database,'site','main')
   const uid = auth.currentUser.uid
-  await runTransaction(db,async transaction => {
+  const current = await getDocFromServer(document)
+  if ((current.exists() ? current.data().revision : 0) !== expectedRevision) throw new Error('Інший адміністратор уже змінив контент. Оновіть чернетку.')
+  const validated = await migrateLocalImages(siteContentSchema.parse(content), async path => {
+    const response = await fetch(path)
+    if (!response.ok) throw new Error(`Не вдалося перенести фото ${path} у Firebase.`)
+    const blob = await response.blob()
+    return uploadImage(new File([blob],path.split('/').pop()!,{type:blob.type}))
+  })
+  const {settings,reports} = splitContent(validated)
+  const existing = await getDocsFromServer(collection(database,'reports'))
+  const previous = new Map(existing.docs.map(item=>[item.id,item.data()]))
+  const next = new Map(reports.map(item=>[item.report.slug,item]))
+  const changed = reports.filter(item=> {
+    const old = previous.get(item.report.slug)
+    return !old || old.order !== item.order || JSON.stringify(reportSchema.parse(old.report)) !== JSON.stringify(item.report)
+  })
+  const removed = existing.docs.filter(item=>!next.has(item.id))
+  if (changed.length + removed.length > 450) throw new Error('Забагато змін за одну публікацію. Публікуйте зміни звітів частинами (до 450).')
+  await runTransaction(database,async transaction => {
     const snapshot = await transaction.get(document)
     const actualRevision = snapshot.exists() ? snapshot.data().revision : 0
     if (actualRevision !== expectedRevision) throw new Error('Інший адміністратор уже змінив контент. Оновіть чернетку й повторіть свої зміни.')
-    transaction.set(document,{content:validated,revision:expectedRevision + 1,updatedAt:serverTimestamp(),updatedBy:uid})
+    transaction.set(document,{content:settings,storageVersion:contentStorageVersion,revision:expectedRevision + 1,updatedAt:serverTimestamp(),updatedBy:uid})
+    for (const item of changed) transaction.set(doc(database,'reports',item.report.slug),{...item,revision:expectedRevision+1,updatedAt:serverTimestamp(),updatedBy:uid})
+    for (const item of removed) transaction.delete(item.ref)
   })
+  return validated
 }
 
 export async function uploadImage(file:File):Promise<string> {

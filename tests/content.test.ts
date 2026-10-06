@@ -52,3 +52,25 @@ test('tracks reject invalid coordinates, single points and excessive length',()=
   }
   assert.equal(routeSchema.safeParse({...createDemoRoute(0),track:[]}).success,true)
 })
+
+
+test('separate report storage preserves large collections and editorial order', async()=>{
+  const {splitContent} = await import('../src/lib/contentPersistence')
+  const content = {...defaultContent,reports:Array.from({length:80},(_,index)=>({...defaultContent.reports[0],slug:`report-${index}`}))}
+  const split = splitContent(content)
+  assert.equal('reports' in split.settings,false)
+  assert.equal(split.reports.length,80)
+  assert.equal(split.reports[79].order,79)
+})
+
+test('local image migration deduplicates assets and keeps source content intact', async()=>{
+  const {migrateLocalImages} = await import('../src/lib/contentPersistence')
+  const calls:string[] = []
+  const migrated = await migrateLocalImages(defaultContent,async path=>{calls.push(path);return `https://example.com${path}`})
+  assert.equal(calls.length,new Set(calls).size)
+  assert.equal(defaultContent.images['hero.image'],'/images/hero.png')
+  assert.equal(migrated.images['hero.image'],'https://example.com/images/hero.png')
+  assert.equal(migrated.reports[0].image.startsWith('https://'),true)
+  const repeated = await migrateLocalImages(migrated,async()=>{throw new Error('Unexpected second upload')})
+  assert.deepEqual(repeated,migrated)
+})

@@ -7,15 +7,16 @@ service cloud.firestore {
     function validContent() {
       let data = request.resource.data;
       return data.keys().hasAll(['content', 'revision', 'updatedAt', 'updatedBy'])
-        && data.keys().hasOnly(['content', 'revision', 'updatedAt', 'updatedBy'])
+        && data.keys().hasOnly(['content', 'revision', 'updatedAt', 'updatedBy', 'storageVersion'])
         && data.updatedBy == request.auth.uid && data.updatedAt == request.time
         && data.revision is int
         && data.content is map
-        && data.content.keys().hasAll(['texts', 'images', 'reports', 'videoUrl', 'heroLayers'])
+        && data.content.keys().hasAll(['texts', 'images', 'videoUrl', 'heroLayers'])
         && data.content.keys().hasOnly(['texts', 'images', 'reports', 'videoUrl', 'heroLayers'])
         && data.content.texts is map && data.content.texts.size() <= 100
         && data.content.images is map && data.content.images.size() <= 100
-        && data.content.reports is list && data.content.reports.size() >= 1 && data.content.reports.size() <= 30
+        && ((!('storageVersion' in data) && data.content.reports is list && data.content.reports.size() >= 1 && data.content.reports.size() <= 30)
+          || (data.storageVersion == 2 && !('reports' in data.content)))
         && data.content.videoUrl is string && data.content.videoUrl.size() <= 2048
         && data.content.videoUrl.matches('https://.*')
         && data.content.heroLayers is bool;
@@ -41,6 +42,30 @@ service cloud.firestore {
       allow create: if editor() && validContent() && request.resource.data.revision == 1;
       allow update: if editor() && validContent() && request.resource.data.revision == resource.data.revision + 1;
       allow delete: if false;
+    }
+    match /reports/{slug} {
+      allow read: if true;
+      function publishing() {
+        let after = getAfter(/databases/$(database)/documents/site/main).data;
+        return editor() && after.storageVersion == 2 && after.updatedBy == request.auth.uid
+          && after.updatedAt == request.time
+          && (!exists(/databases/$(database)/documents/site/main)
+            || after.revision == get(/databases/$(database)/documents/site/main).data.revision + 1);
+      }
+      allow create, update: if publishing()
+        && request.resource.data.keys().hasAll(['report', 'order', 'revision', 'updatedAt', 'updatedBy'])
+        && request.resource.data.keys().hasOnly(['report', 'order', 'revision', 'updatedAt', 'updatedBy'])
+        && request.resource.data.revision == getAfter(/databases/$(database)/documents/site/main).data.revision
+        && request.resource.data.updatedBy == request.auth.uid && request.resource.data.updatedAt == request.time
+        && request.resource.data.order is int && request.resource.data.order >= 0
+        && request.resource.data.report is map
+        && request.resource.data.report.slug == slug
+        && slug.matches('[a-z0-9]+(-[a-z0-9]+)*') && slug.size() <= 100
+        && request.resource.data.report.title is string
+        && request.resource.data.report.image is string
+        && request.resource.data.report.paragraphs is list
+        && request.resource.data.report.photos is list;
+      allow delete: if publishing();
     }
     match /{document=**} { allow read, write: if false; }
   }

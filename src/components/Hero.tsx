@@ -1,3 +1,4 @@
+import PlayIcon from './PlayIcon'
 import VideoPlayer from './VideoPlayer'
 import { useState } from 'react'
 import type { CSSProperties } from 'react'
@@ -32,7 +33,7 @@ export default function Hero() {
     </header>
     <div className="hero-content wrap">
       <div className="hero-copy"><p className="eyebrow">{t('hero.eyebrow')}</p><h1>{t('hero.title')}</h1><p className="hero-description">{t('hero.description')}</p>
-        <div className="hero-actions"><a className="primary-button" href="#directions">{t('hero.cta')} <span>→</span></a><VideoPlayer className="watch-button" title={t('film.title')}><span className="play small">▶</span> {t('hero.video')}</VideoPlayer></div>
+        <div className="hero-actions"><a className="primary-button" href="#directions">{t('hero.cta')} <span>→</span></a><VideoPlayer className="watch-button" title={t('film.title')}><span className="play small"><PlayIcon /></span> {t('hero.video')}</VideoPlayer></div>
       </div>
       <aside className="hero-note">СВОБОДА<br />ЛЮДИ<br />ГОРИ<strong>БІЛЬШЕ,<br />НІЖ СПОРТ</strong></aside>
     </div>

@@ -77,7 +77,7 @@ export const reportSchema = z.object({
 })
 export const siteContentSchema = z.object({
   texts:z.record(z.string().max(10000)), images:z.record(imageUrlSchema),
-  reports:z.array(reportSchema).min(1).max(30).refine(items => new Set(items.map(item => item.slug)).size === items.length, 'Адреси звітів мають бути унікальними'),
+  reports:z.array(reportSchema).min(1).refine(items => new Set(items.map(item => item.slug)).size === items.length, 'Адреси звітів мають бути унікальними'),
   videoUrl:z.string().url().max(2048).refine(value => { try {const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password} catch {return false} }, 'Посилання має починатися з https://'),
   heroLayers:z.boolean(),
 }).refine(content=>!content.texts['video.channelUrl'] || isYouTubeChannelUrl(content.texts['video.channelUrl']),{message:'Вставте посилання на канал YouTube',path:['texts','video.channelUrl']})
