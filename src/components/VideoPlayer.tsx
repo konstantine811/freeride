@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useSiteContent } from '../context/ContentContext'
-import { isYouTubeChannelUrl, youtubeEmbedUrl } from '../lib/youtube'
+import CinematicPlayer from './CinematicPlayer'
+import { isYouTubeChannelUrl, youtubeVideoId } from '../lib/youtube'
 
-export default function VideoPlayer({children,title,className}:{children:ReactNode;title:string;className:string}) {
-  const {content}=useSiteContent()
+export default function VideoPlayer({children,title,className,poster}:{children:ReactNode;title:string;className:string;poster?:string}) {
+  const {content,image}=useSiteContent()
   const [open,setOpen]=useState(false)
   const dialogRef=useRef<HTMLDialogElement>(null)
-  const embed=youtubeEmbedUrl(content.videoUrl)
+  const videoId=youtubeVideoId(content.videoUrl)
   const channel=content.texts['video.channelUrl']
   useEffect(()=>{
     if(!open)return
@@ -20,10 +21,10 @@ export default function VideoPlayer({children,title,className}:{children:ReactNo
   const close=()=>{dialogRef.current?.close();setOpen(false)}
   return <><button type="button" className={className} onClick={()=>setOpen(true)} aria-label={`${title} — переглянути відео`} aria-haspopup="dialog">{children}</button>
     {open && createPortal(<dialog className="video-dialog" ref={dialogRef} aria-label={title} onCancel={()=>setOpen(false)} onClick={event=>{if(event.target===event.currentTarget)close()}}>
-      <header className="video-dialog-heading"><div><p className="eyebrow">FREERIDE PROJECT · ВІДЕО</p><h2>{title}</h2></div><button className="video-dialog-close" onClick={close} aria-label="Закрити відео" autoFocus>✕</button></header>
-      <div className="video-player-frame">{embed ? <iframe src={embed} title={title} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /> : <div className="video-unavailable"><span aria-hidden="true">▷</span><p>Відео для перегляду на сайті ще не додано.</p></div>}</div>
-      <div className="video-dialog-links"><a href={content.videoUrl} target="_blank" rel="noopener noreferrer">Дивитися на YouTube ↗</a>{channel && isYouTubeChannelUrl(channel) && <a href={channel} target="_blank" rel="noopener noreferrer">Наш канал YouTube ↗</a>}</div>
-      <p className="video-dialog-note">Якщо відео недоступне у плеєрі, відкрий його на YouTube.</p>
+      <div className="video-player-frame">
+        <button className="video-dialog-close" onClick={close} aria-label="Закрити відео" autoFocus>✕</button>
+        {videoId ? <CinematicPlayer videoId={videoId} title={title} poster={poster ?? image('film.image')} videoUrl={content.videoUrl} channelUrl={channel && isYouTubeChannelUrl(channel) ? channel : undefined} /> : <div className="video-unavailable"><h2>{title}</h2><span aria-hidden="true">▷</span><p>Відео для перегляду на сайті ще не додано.</p><div className="video-dialog-links"><a href={content.videoUrl} target="_blank" rel="noopener noreferrer">Дивитися на YouTube ↗</a>{channel && isYouTubeChannelUrl(channel) && <a href={channel} target="_blank" rel="noopener noreferrer">Наш канал YouTube ↗</a>}</div></div>}
+      </div>
     </dialog>,document.body)}
   </>
 }

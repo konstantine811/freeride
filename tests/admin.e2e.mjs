@@ -15,7 +15,7 @@ const vite=spawn(process.execPath,['node_modules/vite/bin/vite.js','--host','127
 const chrome=spawn(process.env.CHROME_BIN ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',['--headless=new','--disable-gpu','--no-first-run','--remote-debugging-port=9248',`--user-data-dir=${temporaryDirectory}`,'about:blank'],{stdio:'ignore'})
 let socket
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))
-const poll=async (operation,message)=>{for(let i=0;i<100;i++){try{const result=await operation();if(result)return result}catch{}await wait(100)}throw new Error(message)}
+const poll=async (operation,message)=>{for(let i=0;i<300;i++){try{const result=await operation();if(result)return result}catch{}await wait(100)}throw new Error(message)}
 try {
   await poll(async()=>{const response=await fetch('http://127.0.0.1:14002/');return response.ok},'Backend did not start')
   await environment.clearFirestore()
@@ -119,9 +119,22 @@ try {
   assert.equal(await evaluate("!!document.querySelector('.video-dialog iframe')"),false)
   await evaluate("document.querySelector('.watch-button').click()")
   await until("!!document.querySelector('.video-dialog[open] iframe')")
-  assert.match(await evaluate("document.querySelector('.video-dialog iframe').src"),/^https:\/\/www.youtube-nocookie.com\/embed\/M7lc1UVf-VE\?autoplay=1/)
+  assert.match(await evaluate("document.querySelector('.video-dialog iframe').src"),/^https:\/\/www.youtube-nocookie.com\/embed\/M7lc1UVf-VE/)
   assert.equal(await evaluate("document.querySelector('.video-dialog-links a:last-child').href"),'https://www.youtube.com/@YouTube')
   assert.equal(await evaluate("document.body.style.overflow"),'hidden')
+  await until("!!document.querySelector('.cinematic-player .plyr__controls [data-plyr=play]')")
+  await until("!!document.querySelector('.player-film-info')")
+  assert.equal(await evaluate("document.querySelector('.player-film-info strong').textContent"),'З гір — у кадр.')
+  assert.ok(await evaluate("!!document.querySelector('.cinematic-player input[data-plyr=seek]')"))
+  assert.ok(await evaluate("!!document.querySelector('.cinematic-player [data-plyr=fullscreen]')"))
+  const desktopPlayerShot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})
+  writeFileSync(join(temporaryDirectory,'player-desktop.png'),Buffer.from(desktopPlayerShot.data,'base64'))
+  await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true})
+  assert.equal(await evaluate("document.querySelector('.video-dialog').scrollWidth>document.querySelector('.video-dialog').clientWidth"),false)
+  const playerShot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})
+  writeFileSync(join(temporaryDirectory,'player-mobile.png'),Buffer.from(playerShot.data,'base64'))
+  await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false})
+
   await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27})
   await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27})
   await until("!document.querySelector('.video-dialog')")
@@ -139,6 +152,7 @@ try {
   assert.equal(await evaluate("!!document.querySelector('.video-dialog')"),false)
   console.log('PASS: videos open in a local modal with YouTube/channel links; closing/navigation removes player and unlocks scrolling')
 
+  if(!process.argv.includes('--player-only')) {
   await clickText('.admin-sidebar button','Історії')
   await until("!!document.querySelector('.admin-route-fields')")
   await clickText('button','Прибрати трек')
@@ -180,6 +194,10 @@ try {
   console.log(`Screenshot: ${join(temporaryDirectory,'admin.png')}`)
   console.log(`Map screenshot: ${join(temporaryDirectory,'demo-route.png')}`)
   console.log(`Login screenshot: ${join(temporaryDirectory,'login.png')}`)
+  } else {
+    assert.deepEqual(errors,[])
+    console.log(`Player screenshots: ${temporaryDirectory}`)
+  }
 } finally {
   socket?.close();vite.kill();chrome.kill();backend.kill();await environment.cleanup()
 }

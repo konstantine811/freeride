@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  server: { proxy: { '/api': 'http://127.0.0.1:4000' } },
+  server: { port: 5181, strictPort: true, proxy: { '/api': 'http://127.0.0.1:4000' } },
   build: {
     rollupOptions: {
       output: {
