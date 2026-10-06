@@ -19,7 +19,7 @@ export default function CinematicPlayer({videoId,title,poster,videoUrl,channelUr
         autoplay:true,ratio:'16:9',iconUrl:'/icons/plyr.svg',
         controls:['play-large','play','rewind','fast-forward','progress','current-time','duration','mute','volume','settings','fullscreen'],
         settings:['speed'],hideControls:true,keyboard:{focused:true,global:false},
-        youtube:{noCookie:true,rel:0,iv_load_policy:3},
+        youtube:{noCookie:true,customControls:true,rel:0,iv_load_policy:3},
         i18n:{play:'Відтворити',pause:'Пауза',restart:'З початку',rewind:'Назад на {seektime} с',fastForward:'Вперед на {seektime} с',seek:'Перемотування',seekLabel:'{currentTime} із {duration}',played:'Відтворено',buffered:'Завантажено',currentTime:'Поточний час',duration:'Тривалість',volume:'Гучність',mute:'Вимкнути звук',unmute:'Увімкнути звук',enableCaptions:'Увімкнути субтитри',disableCaptions:'Вимкнути субтитри',enterFullscreen:'Повний екран',exitFullscreen:'Вийти з повного екрана',settings:'Налаштування',speed:'Швидкість',normal:'Звичайна',menuBack:'Назад',quality:'Якість',loop:'Повтор',all:'Усі',disabled:'Вимкнено'},
       })
       if(poster)player.poster=poster
